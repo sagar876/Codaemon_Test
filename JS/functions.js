@@ -1,16 +1,18 @@
 $(document).ready(function () {
-
-    function searchFilter(config) {
+    var config = {
+        url: null,
+        method: "GET"
+    }
+    function searchFilter() {
         var { url, method } = config;
-        console.log(url);
-        makeAjaxCall(url, method).then(function (result) {
+
+        makeAjaxCall(url, method).done(function (result) {
             $('.result-container').empty();
             $('.err').remove();
             var person = result;
             if (person.length) {
                 for (var item in person) {
-
-                    // Destructured person object
+                    // Destructured Person object -- Magic!!
                     var { first_name, last_name, list_agency_desc, list_no, list_title_desc, published_date } = person[item];
 
                     var card_content = '<div class="card col-sm-4"><div class="card-content">' +
@@ -27,22 +29,11 @@ $(document).ready(function () {
                 var error_content = '<div class=err>No results found</div>';
                 $('.result-container').append(error_content);
             }
-        },
-            function (reason) {
-                console.log("Error in processing your request", reason);
-            });
+        }).fail(function (reason) {
+            console.log('Error processing your request.', reason);
+        });
     }
 
-    $(document).on('click', '#search-btn', function () {
-        prepareCall();
-    });
-
-
-    $(document).on('keypress', function (e) {
-        if (e.which == 13) {
-            prepareCall();
-        }
-    });
     function makeAjaxCall(url, methodType) {
         return $.ajax({
             url: url,
@@ -50,49 +41,53 @@ $(document).ready(function () {
             dataType: "json",
         });
     }
-    function prepareCall() {
-        var config = {
-            url: null,
-            method: "GET"
-        }
-        var firstName = $('#first-name').val().replace(/\s+/g, '');
-        var lastName = $('#last-name').val().replace(/\s+/g, '');
+    function prepareAjaxCall() {
+        var baseURL = "https://data.cityofnewyork.us/resource/5scm-b38n.json";
+        var firstName = $('#first-name').val().toUpperCase().replace(/\s+/g, '');
+        var lastName = $('#last-name').val().toUpperCase().replace(/\s+/g, '');
 
         if (firstName != "" && lastName != "") {
-            config.url = "https://data.cityofnewyork.us/resource/5scm-b38n.json?first_name=" + firstName + "&last_name=" + lastName + "";
-
+            config.url = baseURL + "?first_name=" + firstName + "&last_name=" + lastName + "";
         }
         else if (firstName == "" && lastName != "") {
-            config.url = "https://data.cityofnewyork.us/resource/5scm-b38n.json?last_name=" + lastName + "";
+            config.url = baseURL + "?last_name=" + lastName + "";
         }
         else if (firstName != "" && lastName == "") {
-            config.url = "https://data.cityofnewyork.us/resource/5scm-b38n.json?first_name=" + firstName + "";
+            config.url = baseURL + "?first_name=" + firstName + "";
         }
         else {
-            config.url = "https://data.cityofnewyork.us/resource/5scm-b38n.json";
+            config.url = baseURL;
         }
-        loader();
-        setTimeout(() => {
-            searchFilter(config);
-        }, 2000);
+        startFilterProcess();
     }
 
-    function loader(_success) {
+    function startFilterProcess() {
         var obj = $('.preloader'),
             inner = $('.preloader_inner');
         $(obj).addClass('show');
         var w = 0,
-            t = setInterval(function () {
+            t = setInterval(function () {   /* <--------------------- Loader -------*/
                 w = w + 1;
-                $(inner).text(w + '% Waiting for results');
+                $(inner).html('<div class=percent>' + w + '% </br> Waiting for results</div>');
                 if (w === 100) {
                     $(obj).removeClass('show');
                     clearInterval(t);
                     w = 0;
-                    if (_success) {
-                        return _success();
-                    }
+
+                    /*---- Call ----*/
+                    searchFilter();
                 }
             }, 20);
     }
+
+    $(document).on('click', '#search-btn', function () {
+        prepareAjaxCall();
+    });
+
+    /*---------------On Enter key press-------------------*/
+    $(document).on('keypress', function (e) {
+        if (e.which == 13) {
+            prepareAjaxCall();
+        }
+    });
 });
